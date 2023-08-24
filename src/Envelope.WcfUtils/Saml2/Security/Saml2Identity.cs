@@ -18,7 +18,9 @@ internal class Saml2Identity : EnvelopeIdentity, ISaml2Identity, IIdentity
 
 	public DateTime ValidTo => TicketInfo?.ValidTo ?? default;
 
-	internal PrincipalSessionInfo SessionInfo { get; }
+	public PrincipalSessionInfo SessionInfo { get; }
+
+	public string FormsAuthenticationTicketUserData { get; }
 
 	public SecurityToken? SecurityToken
 	{
@@ -37,7 +39,8 @@ internal class Saml2Identity : EnvelopeIdentity, ISaml2Identity, IIdentity
 	internal Saml2Identity(
 		PrincipalTicketInfo ticketInfo,
 		PrincipalSessionInfo sessionInfo,
-		bool isAuthenticated)
+		bool isAuthenticated,
+		string formsAuthenticationTicketUserData)
 		: base(CreateClaimsIdentity(ticketInfo, sessionInfo),
 			Guid.NewGuid(),
 			ticketInfo.Username,
@@ -57,6 +60,7 @@ internal class Saml2Identity : EnvelopeIdentity, ISaml2Identity, IIdentity
 		SessionInfo = sessionInfo;
 		TicketInfo = ticketInfo;
 		IsAuthenticated = isAuthenticated;
+		FormsAuthenticationTicketUserData = formsAuthenticationTicketUserData;
 
 		//var name = TicketInfo.Username;
 		//if (!string.IsNullOrWhiteSpace(name))

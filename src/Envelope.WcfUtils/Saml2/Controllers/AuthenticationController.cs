@@ -161,12 +161,12 @@ public class AuthenticationController : IAuthenticationController
 	/// <summary>
 	/// Ulozi udaje prihlaseneho usera, aby mohla byt jeho identita znovu vytvorena pri dalsom requeste
 	/// </summary>
-	public void StoreCurrentUser(ISaml2ModuleContext context)
+	public async Task StoreCurrentUserAsync(ISaml2ModuleContext context, ITraceInfo traceInfo, Func<string, Saml2Principal, DateTime, Task> sessionStoreDelegate)
 	{
 		if (context.Principal is not Saml2Principal applicationCurrentUser || !applicationCurrentUser.IsFromAssertion)
 			return;
 
-		PrincipalService.StorePrincipal(context.AddCookieToResponse, context.Config.Serializer, applicationCurrentUser);
+		await PrincipalService.StorePrincipal(context.AddCookieToResponse, context.Config.Serializer, applicationCurrentUser, traceInfo, sessionStoreDelegate);
 		var sessionStore = new UserDataSessionStore();
 		sessionStore.Load(context);
 		var sessionIndex = sessionStore.Get<string>(context, UserDataStore.SESSION_INDEX);
@@ -175,17 +175,32 @@ public class AuthenticationController : IAuthenticationController
 	}
 
 	/// <summary>Vytvori a nastavi identitu prihlaseneho usera</summary>
-	public Saml2Principal? ReconstructCurrentUser(ISaml2ModuleContext context)
+	public async Task<Saml2Principal?> ReconstructCurrentUserAsync(ISaml2ModuleContext context, Func<IServiceProvider, string, Task<PrincipalSessionInfo?>> loadPrincipalSessionInfo)
 	{
 		var formsAuthenticationTicketUserData = context.GetRequestCookieUserData();
 
-		if (string.IsNullOrWhiteSpace(formsAuthenticationTicketUserData) || !formsAuthenticationTicketUserData.StartsWith("[Saml2Principal]"))
+		if (string.IsNullOrWhiteSpace(formsAuthenticationTicketUserData) || !formsAuthenticationTicketUserData!.StartsWith("[Saml2Principal]") == true)
 			return null;
 
 		var sessionInfo = LoadCurrentUserSessionInfo(context)!;
+		if (sessionInfo == null)
+		{
+			if (loadPrincipalSessionInfo == null)
+			{
+				return null;
+			}
+			else
+			{
+				sessionInfo = await loadPrincipalSessionInfo(context.ServiceProvider, formsAuthenticationTicketUserData);
+			}
+		}
+
+		if (sessionInfo == null)
+			return null;
+
 		var principalTicketInfoSerialized = formsAuthenticationTicketUserData.Substring("[Saml2Principal]".Length);
 
-		var saml2Principal = PrincipalService.LoadPrincipal(context.Config.Serializer, principalTicketInfoSerialized, sessionInfo);
+		var saml2Principal = PrincipalService.LoadPrincipal(context.Config.Serializer, principalTicketInfoSerialized, sessionInfo, formsAuthenticationTicketUserData!);
 		context.Principal = saml2Principal;
 		return saml2Principal;
 	}
@@ -198,7 +213,7 @@ public class AuthenticationController : IAuthenticationController
 		var sessionIndex = sessionStore.Get<string>(context, UserDataStore.SESSION_INDEX);
 		
 		if (string.IsNullOrEmpty(sessionIndex))
-			return new PrincipalSessionInfo();
+			return null;
 
 		var str = sessionStore.Get<string>(context, sessionIndex, UserDataStore.PRINCIPAL_SESSION_INFO);
 		return context.Config.Serializer.Deserialize<PrincipalSessionInfo>(str!);

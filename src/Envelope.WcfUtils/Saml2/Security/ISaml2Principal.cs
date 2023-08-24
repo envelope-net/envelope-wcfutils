@@ -30,6 +30,6 @@ public interface ISaml2Principal
 	string Assertion { get; }
 
 	IEnumerable<string> Roles { get; }
-
+	
 	DateTime ValidTo { get; }
 }

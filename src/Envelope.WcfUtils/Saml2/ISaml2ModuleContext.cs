@@ -6,6 +6,8 @@ namespace Envelope.WcfUtils.Saml2;
 
 public interface ISaml2ModuleContext
 {
+	IServiceProvider ServiceProvider { get; }
+
 	ISaml2Config Config { get; }
 
 	ILogger Logger { get; }
@@ -17,7 +19,7 @@ public interface ISaml2ModuleContext
 
 	Func<string?> GetRequestCookieUserData { get; }
 
-	Action<DateTime, string, string> AddCookieToResponse { get; }
+	Action<DateTime, string, string, Saml2Principal> AddCookieToResponse { get; }
 
 	Action<bool> FormsAuthenticationSignOut { get; }
 

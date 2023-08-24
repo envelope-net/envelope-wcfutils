@@ -97,8 +97,8 @@ public class Saml2Module
 		});
 	}
 
-	public Saml2Principal? ReconstructCurrentUser()
-		=> authController.ReconstructCurrentUser(Context);
+	public Task<Saml2Principal?> ReconstructCurrentUserAsync(Func<IServiceProvider, string, Task<PrincipalSessionInfo?>> loadPrincipalSessionInfo)
+		=> authController.ReconstructCurrentUserAsync(Context, loadPrincipalSessionInfo);
 
 	public void PostAcquireRequestState(ITraceInfo traceInfo)
 	{
@@ -118,12 +118,12 @@ public class Saml2Module
 	}
 
 	/// <summary>Processes the message.</summary>
-	public void ProcessMessage(ITraceInfo traceInfo)
+	public async Task ProcessMessageAsync(ITraceInfo traceInfo, Func<string, Saml2Principal, DateTime, Task> sessionStoreDelegate)
 	{
 		bool isLogout = false;
-		HandleError(
+		await HandleErrorAsync(
 			traceInfo,
-			() =>
+			async () =>
 			{
 				var saml2Message = authController.ConsumeSamlMessage(traceInfo, Context);
 				if (saml2Message is ISaml2ResponseMessage saml2ResponseMessage
@@ -136,7 +136,7 @@ public class Saml2Module
 				{
 					if (saml2Message is ResponseType)
 					{
-						authController.StoreCurrentUser(Context);
+						await authController.StoreCurrentUserAsync(Context, traceInfo, sessionStoreDelegate);
 						FireSignedIn();
 					}
 
@@ -197,6 +197,35 @@ public class Saml2Module
 		try
 		{
 			action();
+		}
+		catch (Exception ex)
+		{
+			Context.Logger.LogErrorMessage(traceInfo, x => x.ExceptionInfo(ex));
+
+			if (ex is ResponseNotSuccessException && authController.RetrySignIn(traceInfo, Context, saml2Controller))
+				return;
+
+			e = ex;
+		}
+
+		postAction?.Invoke();
+
+		if (e == null)
+			return;
+
+		FireError(e);
+	}
+
+	private async Task HandleErrorAsync(
+		ITraceInfo traceInfo,
+		Func<Task> action,
+		Action? postAction = null)
+	{
+		Exception? e = null;
+
+		try
+		{
+			await action();
 		}
 		catch (Exception ex)
 		{

@@ -1,4 +1,5 @@
-﻿using Envelope.WcfUtils.Saml2.Config;
+﻿using Envelope.Trace;
+using Envelope.WcfUtils.Saml2.Config;
 using Envelope.WcfUtils.Saml2.Messages;
 using Envelope.WcfUtils.Saml2.Serializers;
 
@@ -36,13 +37,16 @@ internal static class PrincipalService
 					Attributes = CreateAttributeDictionary(assertion),
 					Roles = multiValue
 				},
-				true);
+				true,
+				null!);
 	}
 
-	public static void StorePrincipal(
-		Action<DateTime, string, string> addCookieToResponse,
+	public static Task StorePrincipal(
+		Action<DateTime, string, string, Saml2Principal> addCookieToResponse,
 		ISerializer serializer,
-		Saml2Principal principal)
+		Saml2Principal principal,
+		ITraceInfo traceInfo,
+		Func<string, Saml2Principal, DateTime, Task> sessionStoreDelegate)
 	{
 		if (addCookieToResponse == null)
 			throw new ArgumentNullException(nameof(addCookieToResponse));
@@ -53,22 +57,30 @@ internal static class PrincipalService
 		if (principal == null)
 			throw new ArgumentNullException(nameof(principal));
 
+		if (traceInfo == null)
+			throw new ArgumentNullException(nameof(traceInfo));
+
+		if (sessionStoreDelegate == null)
+			throw new ArgumentNullException(nameof(sessionStoreDelegate));
+
 		var issueDate = GlobalContext.Instance.Now;
 		var userName = principal.Identity.Name!;
 		var userData = $"[Saml2Principal]{serializer.Serialize(principal.TicketInfo)}";
-		addCookieToResponse(issueDate, userName, userData);
+		addCookieToResponse(issueDate, userName, userData, principal);
+		return sessionStoreDelegate(userData, principal, principal.ValidTo);
 	}
 
 	public static Saml2Principal LoadPrincipal(
 		ISerializer serializer,
 		string principalTicketInfoSerialized,
-		PrincipalSessionInfo sessionInfo)
+		PrincipalSessionInfo sessionInfo,
+		string formsAuthenticationTicketUserData)
 	{
 		try
 		{
 			var ticketInfo = serializer.Deserialize<PrincipalTicketInfo>(principalTicketInfoSerialized);
 
-			return new Saml2Principal(ticketInfo!, sessionInfo, false);
+			return new Saml2Principal(ticketInfo!, sessionInfo, false, formsAuthenticationTicketUserData);
 		}
 		catch (Exception ex)
 		{

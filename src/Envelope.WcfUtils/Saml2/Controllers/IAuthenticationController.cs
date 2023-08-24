@@ -75,10 +75,10 @@ public interface IAuthenticationController
 	/// <summary>
 	/// Ulozi udaje prihlaseneho usera, aby mohla byt jeho identita znovu vytvorena pri dalsom requeste
 	/// </summary>
-	void StoreCurrentUser(ISaml2ModuleContext context);
+	Task StoreCurrentUserAsync(ISaml2ModuleContext context, ITraceInfo traceInfo, Func<string, Saml2Principal, DateTime, Task> sessionStoreDelegate);
 
 	/// <summary>Vytvori a nastavi identitu prihlaseneho usera</summary>
-	Saml2Principal? ReconstructCurrentUser(ISaml2ModuleContext context);
+	Task<Saml2Principal?> ReconstructCurrentUserAsync(ISaml2ModuleContext context, Func<IServiceProvider, string, Task<PrincipalSessionInfo?>> loadPrincipalSessionInfo);
 
 	/// <summary>
 	/// Overi, ze prihlaseny user je zhodny s tym ktory ma nastavene svoje data v session

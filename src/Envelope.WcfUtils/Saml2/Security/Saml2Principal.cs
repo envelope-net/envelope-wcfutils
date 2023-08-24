@@ -11,7 +11,7 @@ public class Saml2Principal : EnvelopePrincipal, ISaml2Principal, IPrincipal
 
 	public DateTime ValidTo => TicketInfo?.ValidTo ?? default;
 
-	internal PrincipalSessionInfo SessionInfo { get; }
+	public PrincipalSessionInfo SessionInfo { get; }
 
 	internal bool IsFromAssertion { get; }
 
@@ -29,17 +29,21 @@ public class Saml2Principal : EnvelopePrincipal, ISaml2Principal, IPrincipal
 
 	public IEnumerable<string> Roles => SessionInfo.Roles;
 
+	public string FormsAuthenticationTicketUserData { get; }
+
 	internal Saml2Principal(
 		PrincipalTicketInfo ticketInfo,
 		PrincipalSessionInfo sessionInfo,
-		bool isFromAssertion)
-		: base(new Saml2Identity(ticketInfo, sessionInfo, true))
+		bool isFromAssertion,
+		string formsAuthenticationTicketUserData)
+		: base(new Saml2Identity(ticketInfo, sessionInfo, true, formsAuthenticationTicketUserData))
 	{
 		Throw.ArgumentNull(ticketInfo);
 		Throw.ArgumentNull(sessionInfo);
 
-		SessionInfo = sessionInfo;
 		TicketInfo = ticketInfo;
+		SessionInfo = sessionInfo;
 		IsFromAssertion = isFromAssertion;
+		FormsAuthenticationTicketUserData = formsAuthenticationTicketUserData;
 	}
 }
