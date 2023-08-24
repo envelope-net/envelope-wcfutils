@@ -8,4 +8,8 @@ public interface ISaml2Identity : IIdentity
 {
 	DateTime ValidTo { get; }
 	SecurityToken? SecurityToken { get; }
+
+	PrincipalSessionInfo SessionInfo { get; }
+
+	string FormsAuthenticationTicketUserData { get; }
 }
