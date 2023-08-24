@@ -26,7 +26,13 @@ internal static class CertificateHelper
 		}
 
 		return privateKey
-			? FindCert(config.CertificateStore.StoreLocationEnum, config.CertificateStore.StoreNameEnum, config.CertificateStore.FindTypeEnum, x509Certificate2.GetCertHashString())
+			? FindCert(
+				config.CertificateStore.CertificateFileFullPath,
+				config.CertificateStore.CertificatePassword,
+				config.CertificateStore.StoreLocationEnum,
+				config.CertificateStore.StoreNameEnum,
+				config.CertificateStore.FindTypeEnum,
+				x509Certificate2.GetCertHashString())
 			: x509Certificate2;
 	}
 
@@ -47,23 +53,42 @@ internal static class CertificateHelper
 		}
 	}
 
-	internal static X509Certificate2 FindCert(
+	private static X509Certificate2 FindCert(
+		string? certificateFileFullPath,
+		string? certificatePassword,
 		StoreLocation location,
 		StoreName storeName,
 		X509FindType findType,
 		string findValue)
 	{
-		var x509Store = new X509Store(storeName, location);
-		x509Store.Open(OpenFlags.ReadOnly);
-		var certificate2Collection = x509Store.Certificates.Find(findType, (object)findValue, false);
-		x509Store.Close();
-		
-		if (certificate2Collection.Count == 0)
-			throw new InvalidOperationException($"Certificate '{findValue}' not found in store: {location}, {storeName}, {findType}");
+		if (!string.IsNullOrWhiteSpace(certificateFileFullPath)
+			&& !string.IsNullOrWhiteSpace(certificatePassword))
+		{
+			if (string.IsNullOrWhiteSpace(certificatePassword))
+			{
+				var cert = new X509Certificate2(certificateFileFullPath);
+				return cert;
+			}
+			else
+			{
+				var cert = new X509Certificate2(certificateFileFullPath, certificatePassword);
+				return cert;
+			}
+		}
+		else
+		{
+			var x509Store = new X509Store(storeName, location);
+			x509Store.Open(OpenFlags.ReadOnly);
+			var certificate2Collection = x509Store.Certificates.Find(findType, (object)findValue, false);
+			x509Store.Close();
 
-		return certificate2Collection.Count <= 1
-			? certificate2Collection[0]
-			: throw new InvalidOperationException($"Multiple certificates matching '{findValue}' were found in store: {location}, {storeName}, {findType}");
+			if (certificate2Collection.Count == 0)
+				throw new InvalidOperationException($"Certificate '{findValue}' not found in store: {location}, {storeName}, {findType}");
+
+			return certificate2Collection.Count <= 1
+				? certificate2Collection[0]
+				: throw new InvalidOperationException($"Multiple certificates matching '{findValue}' were found in store: {location}, {storeName}, {findType}");
+		}
 	}
 
 	internal static bool ValidateCertificate(X509Certificate2 cert)

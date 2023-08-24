@@ -4,6 +4,9 @@ namespace Envelope.WcfUtils.Saml2.Config;
 
 public class CertificateStoreConfig : IValidable
 {
+	public string? CertificateFileFullPath { get; set; }
+	public string? CertificatePassword { get; set; }
+
 	public string StoreLocation { get; set; } = "LocalMachine";
 
 	public System.Security.Cryptography.X509Certificates.StoreLocation StoreLocationEnum => 
