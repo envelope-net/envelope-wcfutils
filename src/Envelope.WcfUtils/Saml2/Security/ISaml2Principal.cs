@@ -32,4 +32,8 @@ public interface ISaml2Principal
 	IEnumerable<string> Roles { get; }
 	
 	DateTime ValidTo { get; }
+
+	PrincipalSessionInfo SessionInfo { get; }
+
+	string FormsAuthenticationTicketUserData { get; }
 }
