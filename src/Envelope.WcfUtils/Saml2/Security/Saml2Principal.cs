@@ -31,7 +31,7 @@ public class Saml2Principal : EnvelopePrincipal, ISaml2Principal, IPrincipal
 
 	public string FormsAuthenticationTicketUserData { get; }
 
-	internal Saml2Principal(
+	public Saml2Principal(
 		PrincipalTicketInfo ticketInfo,
 		PrincipalSessionInfo sessionInfo,
 		bool isFromAssertion,

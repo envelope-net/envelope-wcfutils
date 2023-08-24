@@ -36,7 +36,7 @@ internal class Saml2Identity : EnvelopeIdentity, ISaml2Identity, IIdentity
 		set => throw new NotSupportedException();
 	}
 
-	internal Saml2Identity(
+	public Saml2Identity(
 		PrincipalTicketInfo ticketInfo,
 		PrincipalSessionInfo sessionInfo,
 		bool isAuthenticated,
