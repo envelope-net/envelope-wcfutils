@@ -4,7 +4,7 @@ using System.ServiceModel.Dispatcher;
 
 namespace Envelope.WcfUtils;
 
-internal class LoggingEndpointBehavior : IEndpointBehavior
+public class LoggingEndpointBehavior : IEndpointBehavior
 {
 	private readonly InspectedSOAPMessages _soapMessages;
 
