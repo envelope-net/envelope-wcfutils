@@ -7,11 +7,13 @@ namespace Envelope.WcfUtils;
 
 internal class LoggingMessageInspector : IClientMessageInspector
 {
+	private readonly bool _logOnlyMessageBody;
 	private readonly InspectedSOAPMessages _soapMessages;
 
-	public LoggingMessageInspector(InspectedSOAPMessages soapMessages)
+	public LoggingMessageInspector(InspectedSOAPMessages soapMessages, bool logOnlyMessageBody)
 	{
 		_soapMessages = soapMessages ?? throw new ArgumentNullException(nameof(soapMessages));
+		_logOnlyMessageBody = logOnlyMessageBody;
 	}
 
 	public object BeforeSendRequest(ref Message request, IClientChannel channel)
@@ -120,19 +122,26 @@ internal class LoggingMessageInspector : IClientMessageInspector
 		//	_soapMessages.Response.CorrelationId = responseCorrelationId;
 	}
 
-	private static string? MessageToString(ref Message message)
+	private string? MessageToString(ref Message message)
 	{
 		if (message == null)
 			return null;
 
-		var buffer = message.CreateBufferedCopy(int.MaxValue);
-		message = buffer.CreateMessage();
+		if (_logOnlyMessageBody)
+		{
+			var buffer = message.CreateBufferedCopy(int.MaxValue);
+			message = buffer.CreateMessage();
 
-		using var newMessage = buffer.CreateMessage();
-		using XmlDictionaryReader reader = newMessage.GetReaderAtBodyContents();
-		string content = reader.ReadOuterXml();
-		buffer.Close();
+			using var newMessage = buffer.CreateMessage();
+			using XmlDictionaryReader reader = newMessage.GetReaderAtBodyContents();
+			string content = reader.ReadOuterXml();
+			buffer.Close();
 
-		return content;
+			return content;
+		}
+		else
+		{
+			return message.ToString();
+		}
 	}
 }
