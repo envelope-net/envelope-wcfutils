@@ -97,8 +97,10 @@ public class Saml2Module
 		});
 	}
 
-	public Task<Saml2Principal?> ReconstructCurrentUserAsync(Func<IServiceProvider, string, Task<PrincipalSessionInfo?>> loadPrincipalSessionInfo)
-		=> authController.ReconstructCurrentUserAsync(Context, loadPrincipalSessionInfo);
+	public Task<Saml2Principal?> ReconstructCurrentUserAsync(
+		Func<IServiceProvider, string, Task<PrincipalSessionInfo?>> loadPrincipalSessionInfo,
+		Func<PrincipalTicketInfo, PrincipalSessionInfo, Task<object?>>? userDataDelegate)
+		=> authController.ReconstructCurrentUserAsync(Context, loadPrincipalSessionInfo, userDataDelegate);
 
 	public void PostAcquireRequestState(ITraceInfo traceInfo)
 	{
@@ -118,14 +120,17 @@ public class Saml2Module
 	}
 
 	/// <summary>Processes the message.</summary>
-	public async Task ProcessMessageAsync(ITraceInfo traceInfo, Func<string, Saml2Principal, DateTime, Task> sessionStoreDelegate)
+	public async Task ProcessMessageAsync(
+		ITraceInfo traceInfo,
+		Func<string, Saml2Principal, DateTime, Task> sessionStoreDelegate,
+		Func<PrincipalTicketInfo, PrincipalSessionInfo, Task<object?>>? userDataDelegate)
 	{
 		bool isLogout = false;
 		await HandleErrorAsync(
 			traceInfo,
 			async () =>
 			{
-				var saml2Message = authController.ConsumeSamlMessage(traceInfo, Context);
+				var saml2Message = await authController.ConsumeSamlMessageAsync(traceInfo, Context, userDataDelegate);
 				if (saml2Message is ISaml2ResponseMessage saml2ResponseMessage
 					&& saml2ResponseMessage.StatusCode == MessageHelper.STATUS_REQUESTER
 					&& saml2ResponseMessage.SecondLevelStatusCode == MessageHelper.STATUS_NO_PASSIVE)

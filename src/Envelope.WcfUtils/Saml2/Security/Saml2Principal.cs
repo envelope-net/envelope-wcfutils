@@ -35,8 +35,9 @@ public class Saml2Principal : EnvelopePrincipal, ISaml2Principal, IPrincipal
 		PrincipalTicketInfo ticketInfo,
 		PrincipalSessionInfo sessionInfo,
 		bool isFromAssertion,
-		string formsAuthenticationTicketUserData)
-		: base(new Saml2Identity(ticketInfo, sessionInfo, true, formsAuthenticationTicketUserData))
+		string formsAuthenticationTicketUserData,
+		object? userData)
+		: base(new Saml2Identity(ticketInfo, sessionInfo, true, formsAuthenticationTicketUserData, userData))
 	{
 		Throw.ArgumentNull(ticketInfo);
 		Throw.ArgumentNull(sessionInfo);

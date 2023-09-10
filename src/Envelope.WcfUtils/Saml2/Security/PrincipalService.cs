@@ -7,10 +7,11 @@ namespace Envelope.WcfUtils.Saml2.Security;
 
 internal static class PrincipalService
 {
-	public static Saml2Principal? CreatePrincipal(
+	public static async Task<Saml2Principal?> CreatePrincipalAsync(
 		AssertionType assertion,
 		string assertionRaw,
-		AssertionAttributeConfig? attrConfig)
+		AssertionAttributeConfig? attrConfig,
+		Func<PrincipalTicketInfo, PrincipalSessionInfo, Task<object?>>? userDataDelegate)
 	{
 		if (attrConfig == null)
 			return null;
@@ -18,27 +19,37 @@ internal static class PrincipalService
 		assertion.Attributes.MapAttributeValues(attrConfig);
 
 		var multiValue = assertion.Attributes.GetMultiValue(attrConfig.RolesAttribute);
+		object? userData = null;
+
+		var principalTicketInfo = new PrincipalTicketInfo()
+		{
+			Username = GetUserNameOrNameID(assertion, attrConfig),
+			AuthnType = assertion.AuthnContextClassRef,
+			SessionIndex = assertion.AuthnStatement.SessionIndex,
+			Id = assertion.Subject.NameID.Value,
+			IdFormat = assertion.Subject.NameID.Format,
+			IdIdp = assertion.Subject.NameID.NameQualifier,
+			IdSp = assertion.Subject.NameID.SPNameQualifier,
+			ValidTo = assertion.AuthnStatement.SessionNotOnOrAfter
+		};
+
+		var principalSessionInfo = new PrincipalSessionInfo()
+		{
+			Assertion = assertionRaw,
+			Attributes = CreateAttributeDictionary(assertion),
+			Roles = multiValue
+		};
+
+		if (userDataDelegate != null)
+			userData = await userDataDelegate.Invoke(principalTicketInfo, principalSessionInfo);
+
 		return 
 			new Saml2Principal(
-				new PrincipalTicketInfo()
-				{
-					Username = GetUserNameOrNameID(assertion, attrConfig),
-					AuthnType = assertion.AuthnContextClassRef,
-					SessionIndex = assertion.AuthnStatement.SessionIndex,
-					Id = assertion.Subject.NameID.Value,
-					IdFormat = assertion.Subject.NameID.Format,
-					IdIdp = assertion.Subject.NameID.NameQualifier,
-					IdSp = assertion.Subject.NameID.SPNameQualifier,
-					ValidTo = assertion.AuthnStatement.SessionNotOnOrAfter
-				},
-				new PrincipalSessionInfo()
-				{
-					Assertion = assertionRaw,
-					Attributes = CreateAttributeDictionary(assertion),
-					Roles = multiValue
-				},
+				principalTicketInfo,
+				principalSessionInfo,
 				true,
-				null!);
+				null!,
+				userData);
 	}
 
 	public static Task StorePrincipal(
@@ -70,17 +81,22 @@ internal static class PrincipalService
 		return sessionStoreDelegate(userData, principal, principal.ValidTo);
 	}
 
-	public static Saml2Principal LoadPrincipal(
+	public static async Task<Saml2Principal> LoadPrincipalAsync(
 		ISerializer serializer,
 		string principalTicketInfoSerialized,
 		PrincipalSessionInfo sessionInfo,
-		string formsAuthenticationTicketUserData)
+		string formsAuthenticationTicketUserData,
+		Func<PrincipalTicketInfo, PrincipalSessionInfo, Task<object?>>? userDataDelegate)
 	{
 		try
 		{
 			var ticketInfo = serializer.Deserialize<PrincipalTicketInfo>(principalTicketInfoSerialized);
 
-			return new Saml2Principal(ticketInfo!, sessionInfo, false, formsAuthenticationTicketUserData);
+			object? userData = null;
+			if (userDataDelegate != null)
+				userData = await userDataDelegate.Invoke(ticketInfo!, sessionInfo);
+
+			return new Saml2Principal(ticketInfo!, sessionInfo, false, formsAuthenticationTicketUserData, userData);
 		}
 		catch (Exception ex)
 		{

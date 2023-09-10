@@ -122,7 +122,10 @@ public class AuthenticationController : IAuthenticationController
 
 	/// <summary>Precita a spracuje prichadzajucu saml spravu</summary>
 	/// <returns>prijata saml sprava</returns>
-	public ISaml2Message ConsumeSamlMessage(ITraceInfo traceInfo, ISaml2ModuleContext context)
+	public async Task<ISaml2Message> ConsumeSamlMessageAsync(
+		ITraceInfo traceInfo,
+		ISaml2ModuleContext context,
+		Func<PrincipalTicketInfo, PrincipalSessionInfo, Task<object?>>? userDataDelegate)
 	{
 		if (context == null)
 			throw new ArgumentNullException(nameof(context));
@@ -142,7 +145,7 @@ public class AuthenticationController : IAuthenticationController
 
 			if (message is ResponseType responseType && responseType.Assertion != null)
 			{
-				var principal = PrincipalService.CreatePrincipal(responseType.Assertion, responseType.AssertionRaw, context.Config.AssertionAttributes);
+				var principal = await PrincipalService.CreatePrincipalAsync(responseType.Assertion, responseType.AssertionRaw, context.Config.AssertionAttributes, userDataDelegate);
 				context.Principal = principal;
 				sessionStore.Clear(UserDataStore.AUTH_RETRIED);
 				var str = sessionStore.Get<string>(context, UserDataStore.SESSION_INDEX);
@@ -175,7 +178,10 @@ public class AuthenticationController : IAuthenticationController
 	}
 
 	/// <summary>Vytvori a nastavi identitu prihlaseneho usera</summary>
-	public async Task<Saml2Principal?> ReconstructCurrentUserAsync(ISaml2ModuleContext context, Func<IServiceProvider, string, Task<PrincipalSessionInfo?>> loadPrincipalSessionInfo)
+	public async Task<Saml2Principal?> ReconstructCurrentUserAsync(
+		ISaml2ModuleContext context,
+		Func<IServiceProvider, string, Task<PrincipalSessionInfo?>> loadPrincipalSessionInfo,
+		Func<PrincipalTicketInfo, PrincipalSessionInfo, Task<object?>>? userDataDelegate)
 	{
 		var formsAuthenticationTicketUserData = context.GetRequestCookieUserData();
 
@@ -200,7 +206,13 @@ public class AuthenticationController : IAuthenticationController
 
 		var principalTicketInfoSerialized = formsAuthenticationTicketUserData.Substring("[Saml2Principal]".Length);
 
-		var saml2Principal = PrincipalService.LoadPrincipal(context.Config.Serializer, principalTicketInfoSerialized, sessionInfo, formsAuthenticationTicketUserData!);
+		var saml2Principal = await PrincipalService.LoadPrincipalAsync(
+			context.Config.Serializer,
+			principalTicketInfoSerialized,
+			sessionInfo,
+			formsAuthenticationTicketUserData!,
+			userDataDelegate);
+
 		context.Principal = saml2Principal;
 		return saml2Principal;
 	}

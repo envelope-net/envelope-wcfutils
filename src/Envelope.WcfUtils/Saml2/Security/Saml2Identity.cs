@@ -40,12 +40,13 @@ internal class Saml2Identity : EnvelopeIdentity, ISaml2Identity, IIdentity
 		PrincipalTicketInfo ticketInfo,
 		PrincipalSessionInfo sessionInfo,
 		bool isAuthenticated,
-		string formsAuthenticationTicketUserData)
+		string formsAuthenticationTicketUserData,
+		object? userData)
 		: base(CreateClaimsIdentity(ticketInfo, sessionInfo),
 			Guid.NewGuid(),
 			ticketInfo.Username,
 			ticketInfo.Username,
-			null,
+			userData,
 			false,
 			sessionInfo.Roles,
 			null,
