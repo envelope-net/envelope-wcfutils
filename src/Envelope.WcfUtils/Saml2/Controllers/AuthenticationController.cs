@@ -125,7 +125,7 @@ public class AuthenticationController : IAuthenticationController
 	public async Task<ISaml2Message> ConsumeSamlMessageAsync(
 		ITraceInfo traceInfo,
 		ISaml2ModuleContext context,
-		Func<PrincipalTicketInfo, PrincipalSessionInfo, Task<object?>>? userDataDelegate)
+		Func<PrincipalTicketInfo, PrincipalSessionInfo, object?, Task<object?>>? userDataDelegate)
 	{
 		if (context == null)
 			throw new ArgumentNullException(nameof(context));
@@ -180,15 +180,20 @@ public class AuthenticationController : IAuthenticationController
 	/// <summary>Vytvori a nastavi identitu prihlaseneho usera</summary>
 	public async Task<Saml2Principal?> ReconstructCurrentUserAsync(
 		ISaml2ModuleContext context,
-		Func<IServiceProvider, string, Task<PrincipalSessionInfo?>> loadPrincipalSessionInfo,
-		Func<PrincipalTicketInfo, PrincipalSessionInfo, Task<object?>>? userDataDelegate)
+		bool readPrincipalSessionInfoFromInMemoryCache,
+		Func<IServiceProvider, string, Task<PrincipalSessionData?>> loadPrincipalSessionInfo,
+		Func<PrincipalTicketInfo, PrincipalSessionInfo, object?, Task<object?>>? userDataDelegate)
 	{
 		var formsAuthenticationTicketUserData = context.GetRequestCookieUserData();
 
 		if (string.IsNullOrWhiteSpace(formsAuthenticationTicketUserData) || !formsAuthenticationTicketUserData!.StartsWith("[Saml2Principal]") == true)
 			return null;
 
-		var sessionInfo = LoadCurrentUserSessionInfo(context)!;
+		object? userInfo = null;
+		var sessionInfo = readPrincipalSessionInfoFromInMemoryCache
+			? LoadCurrentUserSessionInfo(context)!
+			: null;
+
 		if (sessionInfo == null)
 		{
 			if (loadPrincipalSessionInfo == null)
@@ -197,7 +202,9 @@ public class AuthenticationController : IAuthenticationController
 			}
 			else
 			{
-				sessionInfo = await loadPrincipalSessionInfo(context.ServiceProvider, formsAuthenticationTicketUserData);
+				var principalSessionData = await loadPrincipalSessionInfo(context.ServiceProvider, formsAuthenticationTicketUserData);
+				sessionInfo = principalSessionData?.PrincipalSessionInfo;
+				userInfo = principalSessionData?.UserInfo;
 			}
 		}
 
@@ -210,6 +217,7 @@ public class AuthenticationController : IAuthenticationController
 			context.Config.Serializer,
 			principalTicketInfoSerialized,
 			sessionInfo,
+			userInfo,
 			formsAuthenticationTicketUserData!,
 			userDataDelegate);
 

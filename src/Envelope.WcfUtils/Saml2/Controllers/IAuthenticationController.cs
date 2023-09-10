@@ -73,7 +73,7 @@ public interface IAuthenticationController
 	Task<ISaml2Message> ConsumeSamlMessageAsync(
 		ITraceInfo traceInfo,
 		ISaml2ModuleContext context,
-		Func<PrincipalTicketInfo, PrincipalSessionInfo, Task<object?>>? userDataDelegate);
+		Func<PrincipalTicketInfo, PrincipalSessionInfo, object?, Task<object?>>? userDataDelegate);
 
 	/// <summary>
 	/// Ulozi udaje prihlaseneho usera, aby mohla byt jeho identita znovu vytvorena pri dalsom requeste
@@ -83,8 +83,9 @@ public interface IAuthenticationController
 	/// <summary>Vytvori a nastavi identitu prihlaseneho usera</summary>
 	Task<Saml2Principal?> ReconstructCurrentUserAsync(
 		ISaml2ModuleContext context,
-		Func<IServiceProvider, string, Task<PrincipalSessionInfo?>> loadPrincipalSessionInfo,
-		Func<PrincipalTicketInfo, PrincipalSessionInfo, Task<object?>>? userDataDelegate);
+		bool readPrincipalSessionInfoFromInMemoryCache,
+		Func<IServiceProvider, string, Task<PrincipalSessionData?>> loadPrincipalSessionInfo,
+		Func<PrincipalTicketInfo, PrincipalSessionInfo, object?, Task<object?>>? userDataDelegate);
 
 	/// <summary>
 	/// Overi, ze prihlaseny user je zhodny s tym ktory ma nastavene svoje data v session

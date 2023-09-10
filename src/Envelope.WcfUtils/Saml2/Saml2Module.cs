@@ -98,9 +98,10 @@ public class Saml2Module
 	}
 
 	public Task<Saml2Principal?> ReconstructCurrentUserAsync(
-		Func<IServiceProvider, string, Task<PrincipalSessionInfo?>> loadPrincipalSessionInfo,
-		Func<PrincipalTicketInfo, PrincipalSessionInfo, Task<object?>>? userDataDelegate)
-		=> authController.ReconstructCurrentUserAsync(Context, loadPrincipalSessionInfo, userDataDelegate);
+		bool readPrincipalSessionInfoFromInMemoryCache,
+		Func<IServiceProvider, string, Task<PrincipalSessionData?>> loadPrincipalSessionInfo,
+		Func<PrincipalTicketInfo, PrincipalSessionInfo, object?, Task<object?>>? userDataDelegate)
+		=> authController.ReconstructCurrentUserAsync(Context, readPrincipalSessionInfoFromInMemoryCache, loadPrincipalSessionInfo, userDataDelegate);
 
 	public void PostAcquireRequestState(ITraceInfo traceInfo)
 	{
@@ -123,7 +124,7 @@ public class Saml2Module
 	public async Task ProcessMessageAsync(
 		ITraceInfo traceInfo,
 		Func<string, Saml2Principal, DateTime, Task> sessionStoreDelegate,
-		Func<PrincipalTicketInfo, PrincipalSessionInfo, Task<object?>>? userDataDelegate)
+		Func<PrincipalTicketInfo, PrincipalSessionInfo, object?, Task<object?>>? userDataDelegate)
 	{
 		bool isLogout = false;
 		await HandleErrorAsync(

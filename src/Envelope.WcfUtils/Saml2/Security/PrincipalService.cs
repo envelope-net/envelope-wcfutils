@@ -11,7 +11,7 @@ internal static class PrincipalService
 		AssertionType assertion,
 		string assertionRaw,
 		AssertionAttributeConfig? attrConfig,
-		Func<PrincipalTicketInfo, PrincipalSessionInfo, Task<object?>>? userDataDelegate)
+		Func<PrincipalTicketInfo, PrincipalSessionInfo, object?, Task<object?>>? userDataDelegate)
 	{
 		if (attrConfig == null)
 			return null;
@@ -41,7 +41,7 @@ internal static class PrincipalService
 		};
 
 		if (userDataDelegate != null)
-			userData = await userDataDelegate.Invoke(principalTicketInfo, principalSessionInfo);
+			userData = await userDataDelegate.Invoke(principalTicketInfo, principalSessionInfo, null);
 
 		return 
 			new Saml2Principal(
@@ -85,8 +85,9 @@ internal static class PrincipalService
 		ISerializer serializer,
 		string principalTicketInfoSerialized,
 		PrincipalSessionInfo sessionInfo,
+		object? userInfo,
 		string formsAuthenticationTicketUserData,
-		Func<PrincipalTicketInfo, PrincipalSessionInfo, Task<object?>>? userDataDelegate)
+		Func<PrincipalTicketInfo, PrincipalSessionInfo, object?, Task<object?>>? userDataDelegate)
 	{
 		try
 		{
@@ -94,7 +95,7 @@ internal static class PrincipalService
 
 			object? userData = null;
 			if (userDataDelegate != null)
-				userData = await userDataDelegate.Invoke(ticketInfo!, sessionInfo);
+				userData = await userDataDelegate.Invoke(ticketInfo!, sessionInfo, userInfo);
 
 			return new Saml2Principal(ticketInfo!, sessionInfo, false, formsAuthenticationTicketUserData, userData);
 		}
