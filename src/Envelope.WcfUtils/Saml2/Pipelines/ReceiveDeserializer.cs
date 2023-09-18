@@ -154,21 +154,51 @@ internal class ReceiveDeserializer : MessageProcessingService
 			}
 			else
 			{
-				var privateKey = (RSACryptoServiceProvider)certificate.GetRSAPrivateKey();
-				var rgb = (byte[])encryptedElem.EncryptedKey[0].CipherData.Item;
-				var numArray = privateKey.Decrypt(rgb, false);
-				var aes = Aes.Create();
+				var rsaPrivateKey = certificate.GetRSAPrivateKey();
 
-				if (aes == null)
-					return null;
+#if NET6_0_OR_GREATER
+				if (rsaPrivateKey is RSAOpenSsl rsaOpenSsl)
+				{
+					var privateKey = rsaOpenSsl;
+					var rgb = (byte[])encryptedElem.EncryptedKey[0].CipherData.Item;
+					var numArray = privateKey.Decrypt(rgb, RSAEncryptionPadding.Pkcs1);
+					var aes = Aes.Create();
 
-				aes.Key = numArray;
-				var encryptedData = new EncryptedData();
+					if (aes == null)
+						return null;
 
-				if (doc.SelectSingleNode("/zyxq987:Response/zyxq987asser:EncryptedAssertion[1]/node()[local-name()='EncryptedData']", nsMgr) is XmlElement xmlElement)
-					encryptedData.LoadXml(xmlElement);
+					aes.Key = numArray;
+					var encryptedData = new EncryptedData();
 
-				return Encoding.UTF8.GetString(new EncryptedXml(doc).DecryptData(encryptedData, aes));
+					if (doc.SelectSingleNode("/zyxq987:Response/zyxq987asser:EncryptedAssertion[1]/node()[local-name()='EncryptedData']", nsMgr) is XmlElement xmlElement)
+						encryptedData.LoadXml(xmlElement);
+
+					return Encoding.UTF8.GetString(new EncryptedXml(doc).DecryptData(encryptedData, aes));
+				}
+				else
+#endif
+				if (rsaPrivateKey is RSACryptoServiceProvider rsaCryptoServiceProvider)
+				{
+					var privateKey = rsaCryptoServiceProvider;
+					var rgb = (byte[])encryptedElem.EncryptedKey[0].CipherData.Item;
+					var numArray = privateKey.Decrypt(rgb, false);
+					var aes = Aes.Create();
+
+					if (aes == null)
+						return null;
+
+					aes.Key = numArray;
+					var encryptedData = new EncryptedData();
+
+					if (doc.SelectSingleNode("/zyxq987:Response/zyxq987asser:EncryptedAssertion[1]/node()[local-name()='EncryptedData']", nsMgr) is XmlElement xmlElement)
+						encryptedData.LoadXml(xmlElement);
+
+					return Encoding.UTF8.GetString(new EncryptedXml(doc).DecryptData(encryptedData, aes));
+				}
+				else
+				{
+					throw new NotSupportedException($"Unknown {nameof(rsaPrivateKey)} type = '{rsaPrivateKey?.GetType()?.FullName}'");
+				}
 			}
 		}
 		catch (Exception ex)
