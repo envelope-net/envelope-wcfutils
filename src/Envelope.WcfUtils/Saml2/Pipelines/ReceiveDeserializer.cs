@@ -64,21 +64,21 @@ internal class ReceiveDeserializer : MessageProcessingService
 		{
 			case Saml2MessageTypeEnum.AuthnRequest:
 				model.Info.ServiceType = Saml2ServiceTypeEnum.SingleSignOnService;
-				model.Message = Envelope.Serializer.XmlSerializerHelper.ReadFromString<AuthnRequestType>(model.MessageRaw)!;
+				model.Message = Envelope.Serializer.XmlSerializerHelper.DeserializeFromString<AuthnRequestType>(model.MessageRaw)!;
 				break;
 			case Saml2MessageTypeEnum.LogoutRequest:
 				model.Info.ServiceType = Saml2ServiceTypeEnum.SingleLogoutService;
-				model.Message = Envelope.Serializer.XmlSerializerHelper.ReadFromString<LogoutRequestType>(model.MessageRaw)!;
+				model.Message = Envelope.Serializer.XmlSerializerHelper.DeserializeFromString<LogoutRequestType>(model.MessageRaw)!;
 				break;
 			case Saml2MessageTypeEnum.Response:
 				model.Info.ServiceType = Saml2ServiceTypeEnum.AssertionConsumerService;
 				model.Info.IsResponse = true;
-				model.Message = Envelope.Serializer.XmlSerializerHelper.ReadFromString<ResponseType>(model.MessageRaw)!;
+				model.Message = Envelope.Serializer.XmlSerializerHelper.DeserializeFromString<ResponseType>(model.MessageRaw)!;
 				break;
 			case Saml2MessageTypeEnum.LogoutResponse:
 				model.Info.ServiceType = Saml2ServiceTypeEnum.SingleLogoutService;
 				model.Info.IsResponse = true;
-				model.Message = Envelope.Serializer.XmlSerializerHelper.ReadFromString<LogoutResponseType>(model.MessageRaw)!;
+				model.Message = Envelope.Serializer.XmlSerializerHelper.DeserializeFromString<LogoutResponseType>(model.MessageRaw)!;
 				break;
 			default:
 				throw new InvalidOperationException($"message type not supported: {saml2MessageTypeEnum}");
@@ -121,7 +121,7 @@ internal class ReceiveDeserializer : MessageProcessingService
 			return;
 
 		response.AssertionRaw = Decrypt(config, receiver, response.EncryptedAssertion, responseXmlDoc, namespaceManager);
-		response.Assertion = Envelope.Serializer.XmlSerializerHelper.ReadFromString<AssertionType>(response.AssertionRaw);
+		response.Assertion = Envelope.Serializer.XmlSerializerHelper.DeserializeFromString<AssertionType>(response.AssertionRaw);
 	}
 
 	private static string? Decrypt(
