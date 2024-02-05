@@ -121,17 +121,18 @@ public class Saml2Module
 	}
 
 	/// <summary>Processes the message.</summary>
-	public async Task ProcessMessageAsync(
+	public async Task<ISaml2Message?> ProcessMessageAsync(
 		ITraceInfo traceInfo,
 		Func<string, Saml2Principal, DateTime, Task> sessionStoreDelegate,
 		Func<PrincipalTicketInfo, PrincipalSessionInfo, object?, Task<object?>>? userDataDelegate)
 	{
+		ISaml2Message? saml2Message = null;
 		bool isLogout = false;
 		await HandleErrorAsync(
 			traceInfo,
 			async () =>
 			{
-				var saml2Message = await authController.ConsumeSamlMessageAsync(traceInfo, Context, userDataDelegate);
+				saml2Message = await authController.ConsumeSamlMessageAsync(traceInfo, Context, userDataDelegate);
 				if (saml2Message is ISaml2ResponseMessage saml2ResponseMessage
 					&& saml2ResponseMessage.StatusCode == MessageHelper.STATUS_REQUESTER
 					&& saml2ResponseMessage.SecondLevelStatusCode == MessageHelper.STATUS_NO_PASSIVE)
@@ -159,6 +160,8 @@ public class Saml2Module
 
 				LocalLogout(traceInfo, false);
 			});
+
+		return saml2Message;
 	}
 
 	private Saml2MessageModel? HandleError(

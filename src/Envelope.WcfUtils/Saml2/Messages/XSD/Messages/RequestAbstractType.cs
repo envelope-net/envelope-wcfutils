@@ -118,4 +118,7 @@ public abstract class RequestAbstractType : ISaml2Message
 		get => this.consentField;
 		set => this.consentField = value;
 	}
+
+	[XmlIgnore]
+	public string? ReturnUrl { get; set; }
 }

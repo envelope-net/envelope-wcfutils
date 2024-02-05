@@ -146,5 +146,8 @@ namespace Envelope.WcfUtils.Saml2.Messages
 			get => this.consentField;
 			set => this.consentField = value;
 		}
+
+		[XmlIgnore]
+		public string? ReturnUrl { get; set; }
 	}
 }

@@ -13,4 +13,6 @@ public interface ISaml2Message
 	DateTime IssueInstant { get; set; }
 
 	string Destination { get; set; }
+
+	string? ReturnUrl { get; set; }
 }

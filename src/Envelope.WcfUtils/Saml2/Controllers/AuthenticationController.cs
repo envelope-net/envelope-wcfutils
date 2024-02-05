@@ -134,12 +134,12 @@ public class AuthenticationController : IAuthenticationController
 		sessionStore.Load(context);
 
 		var saml2Message = new Saml2ServiceProviderController(context.Logger).ProcessIncommingMessage(traceInfo, context, sessionStore);
-
+		
 		if (saml2Message is StatusResponseType message)
 		{
 			if (MessageHelper.HasNoPassiveStatusCode(message))
 			{
-				RedirectToReturnUrl(context, sessionStore);
+				saml2Message.ReturnUrl = RedirectToReturnUrl(context, sessionStore);
 				return saml2Message;
 			}
 
@@ -150,11 +150,13 @@ public class AuthenticationController : IAuthenticationController
 				sessionStore.Clear(UserDataStore.AUTH_RETRIED);
 				var str = sessionStore.Get<string>(context, UserDataStore.SESSION_INDEX);
 				context.SessionSet(UserDataStore.AUTHENTICATION_CONTROLLER_SESSION_INDEX, str!);
-				RedirectToReturnUrl(context, sessionStore);
+				saml2Message.ReturnUrl = RedirectToReturnUrl(context, sessionStore);
 			}
 
 			if (message is LogoutResponseType)
-				RedirectToReturnUrl(context, sessionStore);
+			{
+				saml2Message.ReturnUrl = RedirectToReturnUrl(context, sessionStore);
+			}
 		}
 
 		sessionStore.Store(context);
@@ -267,15 +269,11 @@ public class AuthenticationController : IAuthenticationController
 	/// <summary>
 	/// Presmerovanie na pozadovanu url. Url je ulozena v session
 	/// </summary>
-	/// <param name="config">instancia konfigu</param>
-	/// <param name="store">instancia session storu</param>
-	private static void RedirectToReturnUrl(ISaml2ModuleContext context, UserDataStore store)
+	/// <param name="context"></param>
+	/// <param name="store"></param>
+	private static string? RedirectToReturnUrl(ISaml2ModuleContext context, UserDataStore store)
 	{
 		var url = store.Get<string>(context, UserDataStore.REQUESTED_URL);
-
-		if (string.IsNullOrWhiteSpace(url))
-			return;
-
-		context.ResponseRedirectToUrl(url);
+		return url;
 	}
 }
